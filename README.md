@@ -1,4 +1,4 @@
-# Rustle
+# Rordle
 
 This is a clone of the [Wordle](https://www.powerlanguage.co.uk/wordle/) game.
 

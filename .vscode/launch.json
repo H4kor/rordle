@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'rustle'",
+            "name": "Debug executable 'rordle'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=rustle",
-                    "--package=rustle"
+                    "--bin=rordle",
+                    "--package=rordle"
                 ],
                 "filter": {
-                    "name": "rustle",
+                    "name": "rordle",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'rustle'",
+            "name": "Debug unit tests in executable 'rordle'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=rustle",
-                    "--package=rustle"
+                    "--bin=rordle",
+                    "--package=rordle"
                 ],
                 "filter": {
-                    "name": "rustle",
+                    "name": "rordle",
                     "kind": "bin"
                 }
             },

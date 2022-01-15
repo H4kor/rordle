@@ -1,12 +1,12 @@
 [package]
-name = "rustle"
+name = "rordle"
 version = "0.1.0"
 author = ["Niko Abeler <niko@rerere.org>"]
 license = "MIT"
 description = "A Wordle clone for the command line"
 readme = "README.md"
-homepage = "https://github.com/H4kor/rustle"
-repository = "https://github.com/H4kor/rustle"
+homepage = "https://github.com/H4kor/rordle"
+repository = "https://github.com/H4kor/rordle"
 keywords = ["cli", "game", "wordle"]
 categories = ["games"]
 

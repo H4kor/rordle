@@ -113,7 +113,7 @@ impl GameState {
 
     pub fn add_char(&mut self, c: char) {
         if self.current_guess.len() < self.word.len() {
-            self.current_guess.push(c);
+            self.current_guess.push(c.to_lowercase().next().unwrap());
         }
     }
 }
@@ -238,7 +238,10 @@ fn game_loop(mut game_state: GameState) {
             let b = stdin.next().unwrap().unwrap();
             match b {
                 Key::Esc => break 'game_loop,
-                Key::Backspace => game_state.back(),
+                Key::Backspace => {
+                    game_state.back();
+                    render_game_state(&game_state);
+                }
                 Key::Char(c) => {
                     if c == '\n' {
                         game_state.confirm();

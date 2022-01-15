@@ -1,6 +1,6 @@
 [package]
 name = "rordle"
-version = "0.1.0"
+version = "0.1.1"
 author = ["Niko Abeler <niko@rerere.org>"]
 license = "MIT"
 description = "A Wordle clone for the command line"

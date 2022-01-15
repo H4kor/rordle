@@ -268,6 +268,7 @@ fn game_loop(mut game_state: GameState) {
     }
 
     render_game_state(&game_state);
+    writeln!(stdout, "{}", termion::cursor::Show).unwrap();
     if !game_state.won() {
         println!("You lost! The word was: {}", game_state.word);
     }

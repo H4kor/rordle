@@ -1,8 +1,6 @@
 extern crate termion;
 
 use rand::prelude::*;
-use std::fs::File;
-use std::io::prelude::*;
 use std::io::{stdin, stdout, Write};
 use termion::color;
 use termion::event::Key;
@@ -121,13 +119,11 @@ impl GameState {
 }
 
 fn init_game() -> GameState {
+    // load string from file
+    let word_str = include_str!("../words.txt");
     // load valid word list from file
     let mut words = Vec::new();
-    let mut file = File::open("words.txt").expect("Failed to open file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("Failed to read file");
-    for line in contents.lines() {
+    for line in word_str.lines() {
         words.push(line.to_string());
     }
 

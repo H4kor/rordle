@@ -1,14 +1,14 @@
 extern crate termion;
 
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-
+use rand::prelude::*;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::io::{stdin, stdout, Write};
 use termion::color;
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum HitInfo {
@@ -36,6 +36,7 @@ impl std::fmt::Display for GameError {
 struct GameState {
     valid_words: Vec<String>,
     guesses: Vec<String>,
+    current_guess: String,
     word: String,
     max_tries: u16,
     last_error: Option<GameError>,
@@ -46,6 +47,7 @@ impl GameState {
         GameState {
             valid_words,
             guesses: Vec::new(),
+            current_guess: String::new(),
             word,
             max_tries: 6,
             last_error: None,
@@ -88,19 +90,35 @@ impl GameState {
     pub fn set_last_error(&mut self, error: GameError) {
         self.last_error = Some(error);
     }
+
     pub fn reset_error(&mut self) {
         self.last_error = None;
     }
-}
 
-// get new game from player
-fn request_new_world() -> String {
-    // println!("Please enter a new world:");
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
-    input.trim().to_string()
+    pub fn back(&mut self) {
+        if self.current_guess.len() > 0 {
+            self.current_guess.pop();
+        }
+    }
+
+    pub fn confirm(&mut self) {
+        let result = self.guess(self.current_guess.clone());
+        match result {
+            Ok(_) => {
+                self.reset_error();
+            }
+            Err(error) => {
+                self.set_last_error(error);
+            }
+        };
+        self.current_guess = String::new();
+    }
+
+    pub fn add_char(&mut self, c: char) {
+        if self.current_guess.len() < self.word.len() {
+            self.current_guess.push(c);
+        }
+    }
 }
 
 fn init_game() -> GameState {
@@ -114,13 +132,17 @@ fn init_game() -> GameState {
         words.push(line.to_string());
     }
 
-    let mut game_state = GameState::new("abamp".to_string(), words); // TODO: pick word from list of valid words
+    let mut rng = rand::thread_rng();
+    let i = rng.gen::<usize>() % words.len();
+    let word = words[i].clone();
+
+    let game_state = GameState::new(word, words); // TODO: pick word from list of valid words
     game_state
 }
 
 fn render_game_state(game_state: &GameState) {
-    let mut stdout = stdout();
-    writeln!(stdout, "{}", termion::clear::All,).unwrap();
+    let mut stdout = stdout().into_raw_mode().unwrap();
+    writeln!(stdout, "{}{}", termion::clear::All, termion::cursor::Hide).unwrap();
     let width = game_state.word.len() as u16;
     let height = game_state.max_tries as u16;
     let m_top = 4;
@@ -135,10 +157,19 @@ fn render_game_state(game_state: &GameState) {
         .unwrap();
 
         // get guess of line or a string of underscores
-        let line_guess: String = match game_state.guesses.get(y as usize) {
-            Some(guess) => guess.clone(),
-            None => (0..width).map(|_| "_").collect::<String>(),
-        };
+        let line_guess: String;
+        if y < game_state.guesses.len() as u16 {
+            line_guess = game_state.guesses[y as usize].clone();
+        } else if y == game_state.guesses.len() as u16 {
+            let mut curr_guess = game_state.current_guess.clone();
+            while curr_guess.len() < width as usize {
+                curr_guess.push('_');
+            }
+            line_guess = curr_guess;
+        } else {
+            line_guess = (0..width).map(|_| "_").collect::<String>();
+        }
+
         // get hits of line
         let line_hits: Vec<HitInfo>;
         if (y as usize) < game_state.guesses.len() {
@@ -148,12 +179,6 @@ fn render_game_state(game_state: &GameState) {
         }
 
         for x in 0..width {
-            // let color = match line_hits[x as usize] {
-            //     HitInfo::Hit => color::Green,
-            //     HitInfo::Contains => color::Yellow,
-            //     HitInfo::Miss => color::Red,
-            // };
-
             // print each letter into a cell
             write!(
                 stdout,
@@ -208,21 +233,37 @@ fn render_game_state(game_state: &GameState) {
 }
 
 fn game_loop(mut game_state: GameState) {
-    while game_state.guesses.len() < 6 {
+    let mut stdin = stdin().keys();
+    let mut stdout = stdout().into_raw_mode().unwrap();
+    'game_loop: while game_state.guesses.len() < 6 {
         render_game_state(&game_state);
-        let guess = request_new_world();
-        let result = game_state.guess(guess);
-        match result {
-            Ok(won) => {
-                game_state.reset_error();
-                if won {
+        'input_loop: loop {
+            let b = stdin.next().unwrap().unwrap();
+            match b {
+                Key::Esc => break 'game_loop,
+                Key::Backspace => game_state.back(),
+                Key::Char(c) => {
+                    if c == '\n' {
+                        game_state.confirm();
+                        break 'input_loop;
+                    } else {
+                        game_state.add_char(c);
+                        render_game_state(&game_state);
+                    }
+                }
+                _ => (),
+            }
+            stdout.flush().unwrap();
+        }
+
+        match game_state.last_error {
+            None => {
+                if game_state.won() {
                     println!("You won!");
                     break;
                 }
             }
-            Err(e) => {
-                game_state.set_last_error(e); //println!("Error: {:?}", e);
-            }
+            _ => (),
         }
     }
 

@@ -2,7 +2,6 @@ extern crate termion;
 
 use rand::prelude::*;
 use std::fs::File;
-use std::io;
 use std::io::prelude::*;
 use std::io::{stdin, stdout, Write};
 use termion::color;
@@ -184,15 +183,16 @@ fn render_game_state(game_state: &GameState) {
                 stdout,
                 "{}|",
                 termion::cursor::Goto(m_left + x * 2, m_top + y * 2),
-            );
+            )
+            .unwrap();
 
             // set color according to hit info
             let hit_info = line_hits.get(x as usize).unwrap();
             if hit_info == &HitInfo::Hit {
-                write!(stdout, "{}", color::Bg(color::Green),);
+                write!(stdout, "{}", color::Bg(color::Green),).unwrap();
             }
             if hit_info == &HitInfo::Contains {
-                write!(stdout, "{}", color::Bg(color::Yellow),);
+                write!(stdout, "{}", color::Bg(color::Yellow),).unwrap();
             }
             if hit_info == &HitInfo::Miss {
                 write!(
@@ -200,10 +200,11 @@ fn render_game_state(game_state: &GameState) {
                     "{}{}",
                     color::Bg(color::Black),
                     color::Bg(color::White),
-                );
+                )
+                .unwrap();
             }
             if hit_info == &HitInfo::None {
-                write!(stdout, "{}", color::Bg(color::Reset),);
+                write!(stdout, "{}", color::Bg(color::Reset),).unwrap();
             }
 
             write!(

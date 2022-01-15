@@ -1,9 +1,16 @@
 [package]
 name = "rustle"
 version = "0.1.0"
-edition = "2021"
+author = ["Niko Abeler <niko@rerere.org>"]
+license = "MIT"
+description = "A Wordle clone for the command line"
+readme = "README.md"
+homepage = "https://github.com/H4kor/rustle"
+repository = "https://github.com/H4kor/rustle"
+keywords = ["cli", "game", "wordle"]
+categories = ["games"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2021"
 
 [dependencies]
 termion = "*"

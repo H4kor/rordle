@@ -15,7 +15,7 @@ enum HitInfo {
     None,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum GameError {
     WrongLength,
     InvalidWord,
@@ -51,7 +51,7 @@ impl GameState {
         }
     }
 
-    pub fn guess(&mut self, guess: String) -> Result<bool, GameError> {
+    fn guess(&mut self, guess: String) -> Result<bool, GameError> {
         if guess.len() != self.word.len() {
             return Err(GameError::WrongLength);
         }
@@ -60,6 +60,14 @@ impl GameState {
         }
         self.guesses.push(guess);
         Ok(self.won())
+    }
+
+    fn set_last_error(&mut self, error: GameError) {
+        self.last_error = Some(error);
+    }
+
+    fn reset_error(&mut self) {
+        self.last_error = None;
     }
 
     pub fn won(&self) -> bool {
@@ -82,14 +90,6 @@ impl GameState {
             }
         }
         hits
-    }
-
-    pub fn set_last_error(&mut self, error: GameError) {
-        self.last_error = Some(error);
-    }
-
-    pub fn reset_error(&mut self) {
-        self.last_error = None;
     }
 
     pub fn back(&mut self) {
@@ -341,5 +341,86 @@ mod tests {
         assert_eq!(hits[2], HitInfo::Hit);
         assert_eq!(hits[3], HitInfo::Hit);
         assert_eq!(hits[4], HitInfo::Miss);
+    }
+
+    #[test]
+    fn test_add_char() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('h');
+        assert_eq!(game_state.current_guess, "h".to_string());
+        game_state.add_char('e');
+        assert_eq!(game_state.current_guess, "he".to_string());
+        game_state.add_char('l');
+        assert_eq!(game_state.current_guess, "hel".to_string());
+        game_state.add_char('l');
+        assert_eq!(game_state.current_guess, "hell".to_string());
+        game_state.add_char('o');
+        assert_eq!(game_state.current_guess, "hello".to_string());
+        game_state.add_char('o');
+        assert_eq!(game_state.current_guess, "hello".to_string());
+    }
+
+    #[test]
+    fn test_add_char_converts_to_lowercase() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('H');
+        assert_eq!(game_state.current_guess, "h".to_string());
+        game_state.add_char('E');
+        assert_eq!(game_state.current_guess, "he".to_string());
+    }
+
+    #[test]
+    fn test_back() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('h');
+        assert_eq!(game_state.current_guess, "h".to_string());
+        game_state.add_char('e');
+        assert_eq!(game_state.current_guess, "he".to_string());
+        game_state.add_char('l');
+        assert_eq!(game_state.current_guess, "hel".to_string());
+        game_state.back();
+        assert_eq!(game_state.current_guess, "he".to_string());
+    }
+
+    #[test]
+    fn test_cofirm_with_too_few_chars() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('h');
+        game_state.add_char('e');
+        game_state.confirm();
+        assert_eq!(game_state.last_error.unwrap(), GameError::WrongLength);
+        assert_eq!(game_state.current_guess.len(), 0);
+        assert_eq!(game_state.guesses.len(), 0);
+    }
+
+    #[test]
+    fn test_cofirm_with_invalid_word() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('j');
+        game_state.add_char('e');
+        game_state.add_char('l');
+        game_state.add_char('l');
+        game_state.add_char('o');
+        game_state.confirm();
+        assert_eq!(game_state.last_error.unwrap(), GameError::InvalidWord);
+        assert_eq!(game_state.current_guess.len(), 0);
+        assert_eq!(game_state.guesses.len(), 0);
+    }
+
+    #[test]
+    fn test_cofirm() {
+        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        game_state.add_char('h');
+        // produce error
+        game_state.confirm();
+        game_state.add_char('h');
+        game_state.add_char('e');
+        game_state.add_char('l');
+        game_state.add_char('l');
+        game_state.add_char('o');
+        game_state.confirm();
+        assert_eq!(game_state.last_error, None);
+        assert_eq!(game_state.current_guess.len(), 0);
+        assert_eq!(game_state.guesses.len(), 1);
     }
 }

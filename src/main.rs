@@ -119,19 +119,25 @@ impl GameState {
 }
 
 fn init_game() -> GameState {
-    // load string from file
-    let word_str = include_str!("../words.txt");
     // load valid word list from file
     let mut words = Vec::new();
-    for line in word_str.lines() {
-        words.push(line.to_string());
+
+    // load string from file
+    let picked_word_str = include_str!("../data/picked_words.txt");
+    for line in picked_word_str.lines() {
+        words.push(line.to_string().to_lowercase());
+    }
+
+    let valid_word_str = include_str!("../data/valid_words.txt");
+    for line in valid_word_str.lines() {
+        words.push(line.to_string().to_lowercase());
     }
 
     let mut rng = rand::thread_rng();
     let i = rng.gen::<usize>() % words.len();
     let word = words[i].clone();
 
-    let game_state = GameState::new(word, words); // TODO: pick word from list of valid words
+    let game_state = GameState::new(word, words);
     game_state
 }
 
@@ -185,29 +191,48 @@ fn render_game_state(game_state: &GameState) {
             // set color according to hit info
             let hit_info = line_hits.get(x as usize).unwrap();
             if hit_info == &HitInfo::Hit {
-                write!(stdout, "{}", color::Bg(color::Green),).unwrap();
+                write!(
+                    stdout,
+                    "{}{}",
+                    color::Bg(color::Green),
+                    color::Fg(color::Black),
+                )
+                .unwrap();
             }
             if hit_info == &HitInfo::Contains {
-                write!(stdout, "{}", color::Bg(color::Yellow),).unwrap();
+                write!(
+                    stdout,
+                    "{}{}",
+                    color::Bg(color::Yellow),
+                    color::Fg(color::Black),
+                )
+                .unwrap();
             }
             if hit_info == &HitInfo::Miss {
                 write!(
                     stdout,
                     "{}{}",
                     color::Bg(color::Black),
-                    color::Bg(color::White),
+                    color::Fg(color::White),
                 )
                 .unwrap();
             }
             if hit_info == &HitInfo::None {
-                write!(stdout, "{}", color::Bg(color::Reset),).unwrap();
+                write!(
+                    stdout,
+                    "{}{}",
+                    color::Bg(color::Reset),
+                    color::Fg(color::Reset)
+                )
+                .unwrap();
             }
 
             write!(
                 stdout,
-                "{}{}",
+                "{}{}{}",
                 line_guess.chars().nth(x as usize).unwrap(),
                 color::Bg(color::Reset),
+                color::Fg(color::Reset)
             )
             .unwrap();
         }

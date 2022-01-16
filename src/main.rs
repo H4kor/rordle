@@ -238,22 +238,16 @@ fn game_loop(mut game_state: GameState) {
             let b = stdin.next().unwrap().unwrap();
             match b {
                 Key::Esc => break 'game_loop,
-                Key::Backspace => {
-                    game_state.back();
-                    render_game_state(&game_state);
+                Key::Backspace => game_state.back(),
+                Key::Char('\n') => {
+                    game_state.confirm();
+                    break 'input_loop;
                 }
-                Key::Char(c) => {
-                    if c == '\n' {
-                        game_state.confirm();
-                        break 'input_loop;
-                    } else {
-                        game_state.add_char(c);
-                        render_game_state(&game_state);
-                    }
-                }
+                Key::Char(c) => game_state.add_char(c),
                 _ => (),
             }
             stdout.flush().unwrap();
+            render_game_state(&game_state);
         }
 
         match game_state.last_error {

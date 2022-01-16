@@ -1,5 +1,6 @@
 extern crate termion;
 
+use clap::{App, Arg};
 use rand::prelude::*;
 use std::io::{stdin, stdout, Write};
 use termion::color;
@@ -37,10 +38,11 @@ struct GameState {
     word: String,
     max_tries: u16,
     last_error: Option<GameError>,
+    any_word: bool,
 }
 
 impl GameState {
-    pub fn new(word: String, valid_words: Vec<String>) -> GameState {
+    pub fn new(word: String, valid_words: Vec<String>, any_word: bool) -> GameState {
         GameState {
             valid_words,
             guesses: Vec::new(),
@@ -48,6 +50,7 @@ impl GameState {
             word,
             max_tries: 6,
             last_error: None,
+            any_word,
         }
     }
 
@@ -55,7 +58,7 @@ impl GameState {
         if guess.len() != self.word.len() {
             return Err(GameError::WrongLength);
         }
-        if !self.valid_words.contains(&guess) {
+        if !self.any_word && !self.valid_words.contains(&guess) {
             return Err(GameError::InvalidWord);
         }
         self.guesses.push(guess);
@@ -116,29 +119,6 @@ impl GameState {
             self.current_guess.push(c.to_lowercase().next().unwrap());
         }
     }
-}
-
-fn init_game() -> GameState {
-    // load valid word list from file
-    let mut words = Vec::new();
-
-    // load string from file
-    let picked_word_str = include_str!("../data/picked_words.txt");
-    for line in picked_word_str.lines() {
-        words.push(line.to_string().to_lowercase());
-    }
-
-    let valid_word_str = include_str!("../data/valid_words.txt");
-    for line in valid_word_str.lines() {
-        words.push(line.to_string().to_lowercase());
-    }
-
-    let mut rng = rand::thread_rng();
-    let i = rng.gen::<usize>() % words.len();
-    let word = words[i].clone();
-
-    let game_state = GameState::new(word, words);
-    game_state
 }
 
 fn render_game_state(game_state: &GameState) {
@@ -293,8 +273,44 @@ fn game_loop(mut game_state: GameState) {
     }
 }
 
+fn init_game(any_word: bool) -> GameState {
+    // load valid word list from file
+    let mut words = Vec::new();
+
+    // load string from file
+    let picked_word_str = include_str!("../data/picked_words.txt");
+    for line in picked_word_str.lines() {
+        words.push(line.to_string().to_lowercase());
+    }
+
+    let valid_word_str = include_str!("../data/valid_words.txt");
+    for line in valid_word_str.lines() {
+        words.push(line.to_string().to_lowercase());
+    }
+
+    let mut rng = rand::thread_rng();
+    let i = rng.gen::<usize>() % words.len();
+    let word = words[i].clone();
+
+    let game_state = GameState::new(word, words, any_word);
+    game_state
+}
+
 fn main() {
-    let game_state = init_game();
+    let matches = App::new("Rordle")
+        .version("0.2.0")
+        .author("Niko Abeler <niko@rerere.org>")
+        .about("A Wordle clone for the terminal")
+        .arg(
+            Arg::new("any_word")
+                .short('a')
+                .long("any-word")
+                .takes_value(false)
+                .help("Allow any word to be guessed"),
+        )
+        .get_matches();
+
+    let game_state = init_game(matches.is_present("any_word"));
     game_loop(game_state)
 }
 
@@ -304,7 +320,8 @@ mod tests {
 
     #[test]
     fn test_new_guess() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         let result = game_state.guess("hello".to_string());
         assert_eq!(result.unwrap(), true);
         assert_eq!(game_state.guesses.len(), 1);
@@ -316,6 +333,7 @@ mod tests {
         let mut game_state = super::GameState::new(
             "hello".to_string(),
             vec!["hello".to_string(), "world".to_string()],
+            false,
         );
         let result = game_state.guess("world".to_string());
         assert_eq!(result.unwrap(), false);
@@ -325,7 +343,8 @@ mod tests {
 
     #[test]
     fn test_guess_rejects_word_of_wrong_length() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         let result = game_state.guess("hell".to_string());
         match result {
             Err(GameError::WrongLength) => assert!(true),
@@ -336,7 +355,8 @@ mod tests {
 
     #[test]
     fn test_guess_rejects_invalid_words() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         let result = game_state.guess("jello".to_string());
         match result {
             Err(GameError::InvalidWord) => assert!(true),
@@ -350,6 +370,7 @@ mod tests {
         let mut game_state = super::GameState::new(
             "hello".to_string(),
             vec!["hello".to_string(), "jolly".to_string()],
+            false,
         );
         let result = game_state.guess("jolly".to_string());
         assert_eq!(result.unwrap(), false);
@@ -364,7 +385,8 @@ mod tests {
 
     #[test]
     fn test_add_char() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('h');
         assert_eq!(game_state.current_guess, "h".to_string());
         game_state.add_char('e');
@@ -381,7 +403,8 @@ mod tests {
 
     #[test]
     fn test_add_char_converts_to_lowercase() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('H');
         assert_eq!(game_state.current_guess, "h".to_string());
         game_state.add_char('E');
@@ -390,7 +413,8 @@ mod tests {
 
     #[test]
     fn test_back() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('h');
         assert_eq!(game_state.current_guess, "h".to_string());
         game_state.add_char('e');
@@ -403,7 +427,8 @@ mod tests {
 
     #[test]
     fn test_cofirm_with_too_few_chars() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('h');
         game_state.add_char('e');
         game_state.confirm();
@@ -414,7 +439,8 @@ mod tests {
 
     #[test]
     fn test_cofirm_with_invalid_word() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('j');
         game_state.add_char('e');
         game_state.add_char('l');
@@ -428,7 +454,8 @@ mod tests {
 
     #[test]
     fn test_cofirm() {
-        let mut game_state = super::GameState::new("hello".to_string(), vec!["hello".to_string()]);
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
         game_state.add_char('h');
         // produce error
         game_state.confirm();
@@ -441,5 +468,16 @@ mod tests {
         assert_eq!(game_state.last_error, None);
         assert_eq!(game_state.current_guess.len(), 0);
         assert_eq!(game_state.guesses.len(), 1);
+    }
+
+    #[test]
+    fn test_accepts_any_word() {
+        let mut game_state = super::GameState::new(
+            "hello".to_string(),
+            vec!["hello".to_string(), "jolly".to_string()],
+            true,
+        );
+        let result = game_state.guess("milli".to_string()).unwrap();
+        assert_eq!(result, false);
     }
 }

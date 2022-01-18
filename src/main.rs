@@ -126,7 +126,7 @@ impl GameState {
 fn render_game_state(game_state: &GameState) {
     let mut stdout = stdout().into_raw_mode().unwrap();
     writeln!(stdout, "{}{}", termion::clear::All, termion::cursor::Hide).unwrap();
-    let width = game_state.word.len() as u16;
+    let width = game_state.word.chars().count() as u16;
     let height = game_state.max_tries as u16;
     let m_top = 4;
     let m_left = 10;

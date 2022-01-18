@@ -57,7 +57,7 @@ impl GameState {
     }
 
     fn guess(&mut self, guess: String) -> Result<bool, GameError> {
-        if guess.len() != self.word.len() {
+        if guess.chars().count() != self.word.chars().count() {
             return Err(GameError::WrongLength);
         }
         if !self.any_word && !self.valid_words.contains(&guess) {
@@ -98,7 +98,7 @@ impl GameState {
     }
 
     pub fn back(&mut self) {
-        if self.current_guess.len() > 0 {
+        if self.current_guess.chars().count() > 0 {
             self.current_guess.pop();
         }
     }
@@ -117,7 +117,7 @@ impl GameState {
     }
 
     pub fn add_char(&mut self, c: char) {
-        if self.current_guess.len() < self.word.len() {
+        if self.current_guess.chars().count() < self.word.chars().count() {
             self.current_guess.push(c.to_lowercase().next().unwrap());
         }
     }
@@ -145,7 +145,7 @@ fn render_game_state(game_state: &GameState) {
             line_guess = game_state.guesses[y as usize].clone();
         } else if y == game_state.guesses.len() as u16 {
             let mut curr_guess = game_state.current_guess.clone();
-            while curr_guess.len() < width as usize {
+            while curr_guess.chars().count() < width as usize {
                 curr_guess.push('_');
             }
             line_guess = curr_guess;
@@ -357,6 +357,16 @@ mod tests {
     }
 
     #[test]
+    fn test_new_guess_umlaut() {
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hällö".to_string()], false);
+        let result = game_state.guess("hällö".to_string());
+        assert_eq!(result.unwrap(), false);
+        assert_eq!(game_state.guesses.len(), 1);
+        assert_eq!(game_state.guesses[0], "hällö".to_string());
+    }
+
+    #[test]
     fn test_new_guess_miss() {
         let mut game_state = super::GameState::new(
             "hello".to_string(),
@@ -427,6 +437,26 @@ mod tests {
         assert_eq!(game_state.current_guess, "hello".to_string());
         game_state.add_char('o');
         assert_eq!(game_state.current_guess, "hello".to_string());
+    }
+
+    #[test]
+    fn test_add_char_test_umlaut() {
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
+        game_state.add_char('Ü');
+        assert_eq!(game_state.current_guess, "ü".to_string());
+    }
+
+    #[test]
+    fn test_add_char_test_umlaut_length() {
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
+        game_state.add_char('Ü');
+        game_state.add_char('Ü');
+        game_state.add_char('Ü');
+        game_state.add_char('Ü');
+        game_state.add_char('Ü');
+        assert_eq!(game_state.current_guess, "üüüüü".to_string());
     }
 
     #[test]
@@ -507,5 +537,20 @@ mod tests {
         );
         let result = game_state.guess("milli".to_string()).unwrap();
         assert_eq!(result, false);
+    }
+
+    #[test]
+    fn test_rendering_with_umlaut() {
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
+        game_state.add_char('Ü');
+        render_game_state(&game_state);
+    }
+    #[test]
+    fn test_rendering_with_one_input() {
+        let mut game_state =
+            super::GameState::new("hello".to_string(), vec!["hello".to_string()], false);
+        game_state.add_char('w');
+        render_game_state(&game_state);
     }
 }

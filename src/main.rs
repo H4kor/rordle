@@ -287,7 +287,7 @@ fn init_game(any_word: bool, word_file: Option<&str>) -> GameState {
             file.read_to_string(&mut contents).unwrap();
             words = contents
                 .split('\n')
-                .map(|s| s.to_string().to_lowercase())
+                .map(|s| s.trim().to_string().to_lowercase())
                 .collect();
 
             let mut rng = rand::thread_rng();

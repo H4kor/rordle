@@ -2,6 +2,8 @@ extern crate termion;
 
 use clap::{App, Arg};
 use rand::prelude::*;
+use std::fs::File;
+use std::io::Read;
 use std::io::{stdin, stdout, Write};
 use termion::color;
 use termion::event::Key;
@@ -273,24 +275,40 @@ fn game_loop(mut game_state: GameState) {
     }
 }
 
-fn init_game(any_word: bool) -> GameState {
+fn init_game(any_word: bool, word_file: Option<&str>) -> GameState {
     // load valid word list from file
     let mut words = Vec::new();
+    let word;
 
-    // load string from file
-    let picked_word_str = include_str!("../data/picked_words.txt");
-    for line in picked_word_str.lines() {
-        words.push(line.to_string().to_lowercase());
+    match word_file {
+        Some(file) => {
+            let mut file = File::open(file).unwrap();
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).unwrap();
+            words = contents.split('\n').map(|s| s.to_string()).collect();
+
+            let mut rng = rand::thread_rng();
+            let i = rng.gen::<usize>() % words.len();
+            word = words[i].clone();
+        }
+        None => {
+            // special list of words acceptable as solutions
+            let picked_word_str = include_str!("../data/picked_words.txt");
+            for line in picked_word_str.lines() {
+                words.push(line.to_string().to_lowercase());
+            }
+
+            let mut rng = rand::thread_rng();
+            let i = rng.gen::<usize>() % words.len();
+            word = words[i].clone();
+
+            // all other words
+            let valid_word_str = include_str!("../data/valid_words.txt");
+            for line in valid_word_str.lines() {
+                words.push(line.to_string().to_lowercase());
+            }
+        }
     }
-
-    let valid_word_str = include_str!("../data/valid_words.txt");
-    for line in valid_word_str.lines() {
-        words.push(line.to_string().to_lowercase());
-    }
-
-    let mut rng = rand::thread_rng();
-    let i = rng.gen::<usize>() % words.len();
-    let word = words[i].clone();
 
     let game_state = GameState::new(word, words, any_word);
     game_state
@@ -302,15 +320,25 @@ fn main() {
         .author("Niko Abeler <niko@rerere.org>")
         .about("A Wordle clone for the terminal")
         .arg(
-            Arg::new("any_word")
+            Arg::new("any-word")
                 .short('a')
                 .long("any-word")
                 .takes_value(false)
                 .help("Allow any word to be guessed"),
         )
+        .arg(
+            Arg::new("word-file")
+                .short('w')
+                .long("word-file")
+                .takes_value(true)
+                .help("Use a word list from a file"),
+        )
         .get_matches();
 
-    let game_state = init_game(matches.is_present("any_word"));
+    let game_state = init_game(
+        matches.is_present("any-word"),
+        matches.value_of("word-file"),
+    );
     game_loop(game_state)
 }
 
